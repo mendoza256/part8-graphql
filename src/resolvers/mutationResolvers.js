@@ -7,6 +7,12 @@ const { JWT_SECRET } = require("../utils/config");
 
 const mutationResolvers = {
   addBook: async (root, args, context) => {
+    if (!context.currentUser) {
+      throw new GraphQLError("Not authenticated", {
+        extensions: { code: "NOT_AUTHENTICATED" },
+      });
+    }
+
     try {
       let author = await Author.findOne({ name: args.author });
 
