@@ -1,11 +1,11 @@
-const queryResolvers = require('./queryResolvers');
-const mutationResolvers = require('./mutationResolvers');
-const fieldResolvers = require('./fieldResolvers');
+const queryResolvers = require("./queryResolvers");
+const mutationResolvers = require("./mutationResolvers");
+const fieldResolvers = require("./fieldResolvers");
 
 const resolvers = {
   Query: queryResolvers,
   Mutation: mutationResolvers,
-  ...fieldResolvers
+  ...fieldResolvers,
 };
 
-module.exports = resolvers; 
+module.exports = resolvers;
