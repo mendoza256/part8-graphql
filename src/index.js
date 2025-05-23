@@ -9,9 +9,13 @@ const resolvers = require("./resolvers");
 const connectDB = require("./utils/db");
 const context = require("./utils/context");
 const cors = require("cors");
+const { makeExecutableSchema } = require("@graphql-tools/schema");
 
 // Connect to MongoDB
 connectDB();
+
+// Create executable schema
+const schema = makeExecutableSchema({ typeDefs, resolvers });
 
 // Logging plugin
 const loggingPlugin = {
@@ -39,14 +43,16 @@ const loggingPlugin = {
 };
 
 const server = new ApolloServer({
-  typeDefs,
-  resolvers,
+  schema,
   plugins: [loggingPlugin],
 });
 
 const startServer = async () => {
   const app = express();
   const httpServer = http.createServer(app);
+
+  // Start Apollo Server
+  await server.start();
 
   // Create WebSocket server
   const wsServer = new WebSocketServer({
@@ -55,10 +61,16 @@ const startServer = async () => {
   });
 
   // Use the WebSocket server with GraphQL
-  useServer({ schema: server.schema }, wsServer);
-
-  // Start Apollo Server
-  await server.start();
+  const serverCleanup = useServer(
+    {
+      schema,
+      context: async (ctx) => {
+        // You can add context handling for subscriptions here if needed
+        return {};
+      },
+    },
+    wsServer
+  );
 
   // Root route handler
   app.get("/", (req, res) => {
@@ -82,6 +94,15 @@ const startServer = async () => {
   httpServer.listen(PORT, () => {
     console.log(`Server ready at http://localhost:${PORT}/graphql`);
     console.log(`Subscriptions ready at ws://localhost:${PORT}/graphql`);
+  });
+
+  // Clean up WebSocket server on shutdown
+  process.on("SIGTERM", () => {
+    console.log("SIGTERM signal received: closing HTTP server");
+    serverCleanup.dispose();
+    httpServer.close(() => {
+      console.log("HTTP server closed");
+    });
   });
 };
 
