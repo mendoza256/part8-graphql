@@ -4,6 +4,7 @@ const Author = require("../../models/author");
 const User = require("../../models/user");
 const jwt = require("jsonwebtoken");
 const { JWT_SECRET } = require("../utils/config");
+const { pubsub, BOOK_ADDED } = require("./subscriptionResolvers");
 
 const mutationResolvers = {
   addBook: async (root, args, context) => {
@@ -30,7 +31,9 @@ const mutationResolvers = {
       const book = new Book({ ...args, author: author._id });
       try {
         await book.save();
-        return Book.findById(book._id).populate("author");
+        const populatedBook = await Book.findById(book._id).populate("author");
+        pubsub.publish(BOOK_ADDED, { bookAdded: populatedBook });
+        return populatedBook;
       } catch (error) {
         throw new GraphQLError("Invalid book data: " + error.message, {
           extensions: { code: "BAD_USER_INPUT" },
